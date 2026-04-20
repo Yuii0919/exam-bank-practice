@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>考題練習（去重）</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e7eef7;
+      --muted: #9aa7b8;
+      --accent: #3d8bfd;
+      --border: #2a3647;
+      --ok: #3ecf8e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #15202b 0%, var(--bg) 100%);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.875rem;
+      max-width: 56rem;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+      margin-top: 0.75rem;
+    }
+    label { font-size: 0.8rem; color: var(--muted); }
+    input[type="search"] {
+      flex: 1 1 12rem;
+      min-width: 10rem;
+      padding: 0.45rem 0.65rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+    }
+    select {
+      padding: 0.45rem 0.5rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+    }
+    .stats {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .stats strong { color: var(--ok); }
+    .mode-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      align-items: center;
+      margin-top: 0.6rem;
+      padding-top: 0.6rem;
+      border-top: 1px solid var(--border);
+    }
+    .mode-row label.row {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+    }
+    .mode-row input[type="checkbox"] { accent-color: var(--accent); }
+    button.ghost,
+    button.primary {
+      font: inherit;
+      cursor: pointer;
+      border-radius: 8px;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+    }
+    button.primary {
+      background: #1a3a5c;
+      border-color: #2c5282;
+      color: #b8d7ff;
+    }
+    button.ghost:hover,
+    button.primary:hover { filter: brightness(1.08); }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: none;
+    }
+    main { padding: 1rem 1.25rem 3rem; max-width: 52rem; margin: 0 auto; }
+    article {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.85rem;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.12rem 0.45rem;
+      border-radius: 999px;
+      background: #243044;
+      color: #c5d4e8;
+    }
+    .stem { font-size: 0.98rem; margin: 0 0 0.65rem; white-space: pre-wrap; }
+    .opts { margin: 0; padding: 0; list-style: none; }
+    .opt-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin: 0.35rem 0;
+    }
+    .opt-btn {
+      flex: 1;
+      text-align: left;
+      font: inherit;
+      color: var(--text);
+      cursor: pointer;
+      border-radius: 10px;
+      padding: 0.45rem 0.65rem;
+      border: 1px solid var(--border);
+      background: #121c2a;
+      line-height: 1.45;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .opt-btn:hover { border-color: #3d5a80; }
+    .opt-btn .lit { font-weight: 600; color: #9ecfff; margin-right: 0.35rem; }
+    .opt-btn.selected { border-color: var(--accent); background: #1a2740; }
+    .opt-btn.mark-correct { border-color: #2d6a4f; background: #14241f; }
+    .opt-btn.mark-wrong { border-color: #8b3a3a; background: #291818; }
+    .q-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.65rem;
+    }
+    .q-actions small { color: var(--muted); align-self: center; margin-left: 0.25rem; }
+    .fig {
+      margin: 0.65rem 0;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px dashed var(--border);
+      background: #121a24;
+    }
+    .fig img {
+      display: block;
+      max-width: 100%;
+      height: auto;
+    }
+    .fig .missing {
+      padding: 0.75rem 1rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .ans {
+      margin-top: 0.65rem;
+      padding-top: 0.65rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.88rem;
+    }
+    .ans.hidden { display: none; }
+    .ans span.ref { color: var(--accent); }
+    .grade {
+      margin-top: 0.45rem;
+      font-size: 0.85rem;
+      padding: 0.45rem 0.55rem;
+      border-radius: 8px;
+      background: #121c2a;
+    }
+    .grade.ok { color: #7dffc8; }
+    .grade.bad { color: #ffb4b4; }
+    .grade.neutral { color: var(--muted); }
+    footer {
+      padding: 1rem 1.25rem 2rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-align: center;
+      border-top: 1px solid var(--border);
+    }
+    mark { background: #3d3420; color: #ffd479; padding: 0 0.15rem; }
+    .empty { color: var(--muted); text-align: center; padding: 2rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>考題練習</h1>
+    <p class="sub">
+      預設為<strong>練習模式</strong>：不顯示參考答案；可先點選作答，再按「對答案」，或使用上方「全部顯示答案／複習模式」。題幹與選項維持匯入原文；去重時會略去開頭題號（如 12.）再比對題幹。附圖請放在
+      <code>exam-bank/images/</code>。
+    </p>
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="搜尋題幹或選項…" autocomplete="off" />
+      <div>
+        <label for="type">題型</label>
+        <select id="type">
+          <option value="all">全部</option>
+          <option value="single">單選</option>
+          <option value="multi">複選</option>
+          <option value="single-wrong">單選（選錯誤）</option>
+          <option value="multi-wrong">複選（選錯誤）</option>
+        </select>
+      </div>
+      <div class="stats" id="stats"></div>
+    </div>
+    <div class="mode-row">
+      <label class="row"><input type="checkbox" id="practiceMode" checked /> 練習模式（預設隱藏答案）</label>
+      <label class="row"><input type="checkbox" id="reviewMode" /> 複習模式（一律顯示全部參考答案）</label>
+      <button type="button" class="primary" id="showAllAns">全部顯示答案</button>
+      <button type="button" class="ghost" id="hideAllAns">全部隱藏答案</button>
+      <button type="button" class="ghost" id="clearPick">清除作答選取</button>
+    </div>
+  </header>
+  <main id="list"></main>
+  <footer>
+    建議以本機伺服器開啟（避免部分瀏覽器檔案協定限制）：在 <code>exam-bank</code> 資料夾執行
+    <code>python -m http.server 8765</code>，再開啟 <code>http://localhost:8765/</code>
+  </footer>
+
+  <script src="questions.js"></script>
+  <script>
+    (function () {
+      var LS_KEY = "exam-bank-practice-v1";
+
+      function normalizeStem(s) {
+        return String(s || "")
+          .replace(/^\s*\d+\.\s*/, "")
+          .replace(/\s+/g, "")
+          .replace(/[\u3000]/g, "")
+          .trim();
+      }
+
+      function dedupe(raw) {
+        var map = new Map();
+        for (var i = 0; i < raw.length; i++) {
+          var q = raw[i];
+          var key = normalizeStem(q.stem);
+          if (!key) continue;
+          if (!map.has(key)) {
+            map.set(key, Object.assign({}, q, { _mergedFrom: [q.id] }));
+          } else {
+            var cur = map.get(key);
+            cur._mergedFrom.push(q.id);
+            if (!cur.image && q.image) cur.image = q.image;
+            if (!cur.score && q.score) cur.score = q.score;
+          }
+        }
+        return Array.from(map.values());
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function typeLabel(t) {
+        switch (t) {
+          case "single": return "單選";
+          case "multi": return "複選";
+          case "single-wrong": return "單選（選錯誤）";
+          case "multi-wrong": return "複選（選錯誤）";
+          default: return t || "";
+        }
+      }
+
+      function isMultiType(t) {
+        return t === "multi" || t === "multi-wrong";
+      }
+
+      function parseCorrectLetters(q) {
+        var opts = q.options || [];
+        var ra = (q.referenceAnswer != null && String(q.referenceAnswer).trim() !== "")
+          ? String(q.referenceAnswer).trim()
+          : "";
+        if (!ra) return [];
+        var parts = ra.split(/[；;]\s*/).map(function (p) { return p.trim(); }).filter(Boolean);
+        var letters = [];
+        for (var p = 0; p < parts.length; p++) {
+          var piece = parts[p];
+          var idx = -1;
+          for (var o = 0; o < opts.length; o++) {
+            if (String(opts[o]).trim() === piece) {
+              idx = o;
+              break;
+            }
+          }
+          if (idx >= 0) letters.push(String.fromCharCode(65 + idx));
+        }
+        if (!letters.length && ra.length <= 2 && /^[A-Da-d]+$/.test(ra)) {
+          return ra.toUpperCase().split("");
+        }
+        return letters;
+      }
+
+      function loadState() {
+        try {
+          var raw = localStorage.getItem(LS_KEY);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(
+            LS_KEY,
+            JSON.stringify({
+              practiceMode: state.practiceMode,
+              reviewMode: state.reviewMode,
+              revealed: Array.from(state.revealed),
+              selected: Array.from(state.selected.entries()).map(function (e) {
+                return [e[0], Array.from(e[1])];
+              }),
+              graded: Array.from(state.graded),
+            })
+          );
+        } catch (e) {}
+      }
+
+      var all = typeof QUESTIONS_RAW !== "undefined" ? QUESTIONS_RAW : [];
+      var merged = dedupe(all);
+      var removed = all.length - merged.length;
+
+      var persisted = loadState();
+      var state = {
+        practiceMode: persisted && typeof persisted.practiceMode === "boolean" ? persisted.practiceMode : true,
+        reviewMode: persisted && typeof persisted.reviewMode === "boolean" ? persisted.reviewMode : false,
+        revealed: new Set((persisted && persisted.revealed) || []),
+        selected: new Map(),
+        graded: new Set((persisted && persisted.graded) || []),
+      };
+
+      if (persisted && persisted.selected) {
+        persisted.selected.forEach(function (pair) {
+          state.selected.set(pair[0], new Set(pair[1]));
+        });
+      }
+
+      var listEl = document.getElementById("list");
+      var statsEl = document.getElementById("stats");
+      var searchEl = document.getElementById("q");
+      var typeEl = document.getElementById("type");
+      var practiceEl = document.getElementById("practiceMode");
+      var reviewEl = document.getElementById("reviewMode");
+
+      function syncHeaderChecks() {
+        practiceEl.checked = state.practiceMode;
+        reviewEl.checked = state.reviewMode;
+      }
+
+      function answerVisibleFor(q) {
+        if (state.reviewMode) return true;
+        if (!state.practiceMode) return true;
+        return state.revealed.has(q.id);
+      }
+
+      function render() {
+        var qv = searchEl.value.trim().toLowerCase();
+        var tv = typeEl.value;
+        var rows = merged.filter(function (q) {
+          if (tv !== "all" && q.type !== tv) return false;
+          if (!qv) return true;
+          var blob = (q.stem + "\n" + (q.options || []).join("\n")).toLowerCase();
+          return blob.includes(qv);
+        });
+
+        statsEl.innerHTML =
+          "匯入 <strong>" +
+          all.length +
+          "</strong> 題 · 去重後 <strong>" +
+          merged.length +
+          "</strong> 題" +
+          (removed > 0 ? " · 已合併重複 <strong>" + removed + "</strong> 筆" : "");
+
+        if (!rows.length) {
+          listEl.innerHTML = '<p class="empty">沒有符合條件的題目。</p>';
+          return;
+        }
+
+        listEl.innerHTML = rows
+          .map(function (q, i) {
+            var opts = (q.options || [])
+              .map(function (o, j) {
+                var letter = String.fromCharCode(65 + j);
+                var sel = state.selected.get(q.id);
+                var picked = sel && sel.has(letter);
+                var graded = state.graded.has(q.id);
+                var correctLetters = parseCorrectLetters(q);
+                var isCor = graded && correctLetters.indexOf(letter) >= 0;
+                var isWrongPick = graded && picked && correctLetters.indexOf(letter) < 0;
+                var cls = "opt-btn";
+                if (picked) cls += " selected";
+                if (graded && isCor) cls += " mark-correct";
+                if (isWrongPick) cls += " mark-wrong";
+                return (
+                  '<li class="opt-row">' +
+                  '<button type="button" class="' +
+                  cls +
+                  '" data-act="pick" data-qid="' +
+                  escapeHtml(q.id) +
+                  '" data-letter="' +
+                  letter +
+                  '">' +
+                  '<span class="lit">' +
+                  letter +
+                  ".</span>" +
+                  escapeHtml(o) +
+                  "</button></li>"
+                );
+              })
+              .join("");
+
+            var fig = "";
+            if (q.image) {
+              var src = "images/" + encodeURIComponent(q.image);
+              fig =
+                '<div class="fig">' +
+                '<img src="' +
+                src +
+                '" alt="題附圖" loading="lazy" onerror="this.style.display=\'none\'; this.parentElement.querySelector(\'.missing\').hidden=false;" />' +
+                '<p class="missing" hidden>找不到圖檔：<code>images/' +
+                escapeHtml(q.image) +
+                "</code></p>" +
+                "</div>";
+            }
+
+            var mergedNote =
+              q._mergedFrom && q._mergedFrom.length > 1
+                ? "（合併 id：" + q._mergedFrom.join(", ") + "）"
+                : "";
+
+            var hasRef = q.referenceAnswer != null && String(q.referenceAnswer).trim() !== "";
+            var hasNote = q.answerNote && String(q.answerNote).trim() !== "";
+            var showAns = answerVisibleFor(q);
+
+            var ansBody = "";
+            if (hasRef) {
+              ansBody +=
+                '參考答案：<span class="ref">' + escapeHtml(String(q.referenceAnswer)) + "</span>";
+            }
+            if (hasNote) {
+              if (ansBody) ansBody += "<br/>";
+              ansBody += "<span>" + escapeHtml(String(q.answerNote)) + "</span>";
+            }
+            if (!ansBody) ansBody = "<span class=\"ref\">（本題未設定參考答案文字）</span>";
+
+            var ansHiddenClass = showAns ? "" : " hidden";
+
+            var gradeHtml = "";
+            if (state.graded.has(q.id)) {
+              var correctLetters = parseCorrectLetters(q);
+              var user = Array.from(state.selected.get(q.id) || []);
+              var ok = false;
+              if (correctLetters.length) {
+                var a = correctLetters.slice().sort().join("");
+                var b = user.slice().sort().join("");
+                ok = a === b;
+              }
+              var gcls = !correctLetters.length ? "neutral" : ok ? "ok" : "bad";
+              var gtext = !correctLetters.length
+                ? "無法比對：請自行對照參考答案或補齊題庫。"
+                : ok
+                  ? "與參考答案一致。"
+                  : "與參考答案不一致；請對照參考選項。";
+              gradeHtml = '<div class="grade ' + gcls + '">' + escapeHtml(gtext) + "</div>";
+            }
+
+            return (
+              "<article data-id=\"" +
+              escapeHtml(q.id) +
+              "\">" +
+              '<div class="meta">' +
+              '<span class="badge">#' +
+              (i + 1) +
+              "</span>" +
+              '<span class="badge">' +
+              escapeHtml(typeLabel(q.type)) +
+              "</span>" +
+              (q.score != null ? '<span class="badge">配分 ' + escapeHtml(String(q.score)) + "</span>" : "") +
+              '<span class="badge">id: ' +
+              escapeHtml(q.id) +
+              "</span>" +
+              "</div>" +
+              '<p class="stem">' +
+              escapeHtml(q.stem) +
+              "</p>" +
+              fig +
+              (opts ? '<ul class="opts">' + opts + "</ul>" : "") +
+              '<div class="q-actions">' +
+              '<button type="button" class="primary" data-act="grade" data-qid="' +
+              escapeHtml(q.id) +
+              '">對答案</button>' +
+              '<button type="button" class="ghost" data-act="clear-one" data-qid="' +
+              escapeHtml(q.id) +
+              '">重選</button>' +
+              "<small>點選項即可作答（複選題可多選）</small>" +
+              "</div>" +
+              '<div class="ans' +
+              ansHiddenClass +
+              '" data-ans="' +
+              escapeHtml(q.id) +
+              '">' +
+              ansBody +
+              gradeHtml +
+              "</div>" +
+              (mergedNote ? '<p class="meta" style="margin-top:0.5rem">' + escapeHtml(mergedNote) + "</p>" : "") +
+              "</article>"
+            );
+          })
+          .join("");
+
+        syncHeaderChecks();
+      }
+
+      listEl.addEventListener("click", function (ev) {
+        var t = ev.target;
+        if (!t || !t.getAttribute) return;
+        var btn = t.closest("button[data-act]");
+        if (!btn) return;
+        var act = btn.getAttribute("data-act");
+        var qid = btn.getAttribute("data-qid");
+        var letter = btn.getAttribute("data-letter");
+        var q = merged.find(function (x) { return x.id === qid; });
+        if (!q && act === "pick") return;
+
+        if (act === "pick" && qid && letter) {
+          var multi = isMultiType(q.type);
+          var set = state.selected.get(qid) || new Set();
+          if (multi) {
+            if (set.has(letter)) set.delete(letter);
+            else set.add(letter);
+          } else {
+            set = new Set([letter]);
+          }
+          state.selected.set(qid, set);
+          state.graded.delete(qid);
+          saveState();
+          render();
+          return;
+        }
+
+        if (act === "grade" && qid) {
+          state.revealed.add(qid);
+          state.graded.add(qid);
+          saveState();
+          render();
+          return;
+        }
+
+        if (act === "clear-one" && qid) {
+          state.selected.delete(qid);
+          state.graded.delete(qid);
+          state.revealed.delete(qid);
+          saveState();
+          render();
+        }
+      });
+
+      practiceEl.addEventListener("change", function () {
+        state.practiceMode = practiceEl.checked;
+        if (state.practiceMode) {
+          state.reviewMode = false;
+          reviewEl.checked = false;
+        }
+        saveState();
+        render();
+      });
+
+      reviewEl.addEventListener("change", function () {
+        state.reviewMode = reviewEl.checked;
+        if (state.reviewMode) {
+          practiceEl.checked = false;
+          state.practiceMode = false;
+        } else if (!practiceEl.checked) {
+          state.practiceMode = false;
+        }
+        saveState();
+        render();
+      });
+
+      document.getElementById("showAllAns").addEventListener("click", function () {
+        merged.forEach(function (q) {
+          state.revealed.add(q.id);
+        });
+        saveState();
+        render();
+      });
+
+      document.getElementById("hideAllAns").addEventListener("click", function () {
+        state.revealed.clear();
+        state.graded.clear();
+        saveState();
+        render();
+      });
+
+      document.getElementById("clearPick").addEventListener("click", function () {
+        state.selected.clear();
+        state.graded.clear();
+        saveState();
+        render();
+      });
+
+      searchEl.addEventListener("input", render);
+      typeEl.addEventListener("change", render);
+      syncHeaderChecks();
+      render();
+    })();
+  </script>
+</body>
+</html>
