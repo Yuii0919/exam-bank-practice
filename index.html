@@ -159,6 +159,11 @@
     .opt-btn.selected { border-color: var(--accent); background: #1a2740; }
     .opt-btn.mark-correct { border-color: #2d6a4f; background: #14241f; }
     .opt-btn.mark-wrong { border-color: #8b3a3a; background: #291818; }
+    .opt-btn.answer-reveal {
+      border-width: 2px;
+      border-color: #58d68d;
+      box-shadow: 0 0 0 1px rgba(88, 214, 141, 0.25);
+    }
     .q-actions {
       display: flex;
       flex-wrap: wrap;
@@ -216,11 +221,19 @@
   <header>
     <h1>考題練習</h1>
     <p class="sub">
-      預設為<strong>練習模式</strong>：不顯示參考答案；可先點選作答，再按「對答案」，或使用上方「全部顯示答案／複習模式」。題幹與選項維持匯入原文；去重時會略去開頭題號（如 12.）再比對題幹。附圖請放在
+      可依需求切換是否顯示參考答案。題幹與選項維持匯入原文；去重時會略去開頭題號（如 12.）再比對題幹。附圖請放在
       <code>exam-bank/images/</code>。
     </p>
     <div class="toolbar">
       <input type="search" id="q" placeholder="搜尋題幹或選項…" autocomplete="off" />
+      <div>
+        <label for="paper">試卷</label>
+        <select id="paper">
+          <option value="all">全部</option>
+          <option value="paper1">試卷一</option>
+          <option value="paper2">試卷二</option>
+        </select>
+      </div>
       <div>
         <label for="type">題型</label>
         <select id="type">
@@ -300,6 +313,16 @@
         return t === "multi" || t === "multi-wrong";
       }
 
+      function paperOf(q) {
+        var n = parseInt(String(q && q.id || "").replace(/[^\d]/g, ""), 10);
+        if (!isNaN(n) && n >= 51 && n <= 89) return "paper2";
+        return "paper1";
+      }
+
+      function paperLabel(p) {
+        return p === "paper2" ? "試卷二" : "試卷一";
+      }
+
       function parseCorrectLetters(q) {
         var opts = q.options || [];
         var ra = (q.referenceAnswer != null && String(q.referenceAnswer).trim() !== "")
@@ -374,6 +397,7 @@
       var listEl = document.getElementById("list");
       var statsEl = document.getElementById("stats");
       var searchEl = document.getElementById("q");
+      var paperEl = document.getElementById("paper");
       var typeEl = document.getElementById("type");
       var practiceEl = document.getElementById("practiceMode");
       var reviewEl = document.getElementById("reviewMode");
@@ -391,8 +415,10 @@
 
       function render() {
         var qv = searchEl.value.trim().toLowerCase();
+        var pv = paperEl.value;
         var tv = typeEl.value;
         var rows = merged.filter(function (q) {
+          if (pv !== "all" && paperOf(q) !== pv) return false;
           if (tv !== "all" && q.type !== tv) return false;
           if (!qv) return true;
           var blob = (q.stem + "\n" + (q.options || []).join("\n")).toLowerCase();
@@ -414,18 +440,23 @@
 
         listEl.innerHTML = rows
           .map(function (q, i) {
+            var correctLetters = parseCorrectLetters(q);
+            var hasNote = q.answerNote && String(q.answerNote).trim() !== "";
+            var showAns = answerVisibleFor(q);
+
             var opts = (q.options || [])
               .map(function (o, j) {
                 var letter = String.fromCharCode(65 + j);
                 var sel = state.selected.get(q.id);
                 var picked = sel && sel.has(letter);
                 var graded = state.graded.has(q.id);
-                var correctLetters = parseCorrectLetters(q);
                 var isCor = graded && correctLetters.indexOf(letter) >= 0;
                 var isWrongPick = graded && picked && correctLetters.indexOf(letter) < 0;
+                var revealCor = showAns && correctLetters.indexOf(letter) >= 0;
                 var cls = "opt-btn";
                 if (picked) cls += " selected";
                 if (graded && isCor) cls += " mark-correct";
+                if (revealCor) cls += " answer-reveal";
                 if (isWrongPick) cls += " mark-wrong";
                 return (
                   '<li class="opt-row">' +
@@ -464,20 +495,10 @@
                 ? "（合併 id：" + q._mergedFrom.join(", ") + "）"
                 : "";
 
-            var hasRef = q.referenceAnswer != null && String(q.referenceAnswer).trim() !== "";
-            var hasNote = q.answerNote && String(q.answerNote).trim() !== "";
-            var showAns = answerVisibleFor(q);
-
             var ansBody = "";
-            if (hasRef) {
-              ansBody +=
-                '參考答案：<span class="ref">' + escapeHtml(String(q.referenceAnswer)) + "</span>";
-            }
             if (hasNote) {
-              if (ansBody) ansBody += "<br/>";
               ansBody += "<span>" + escapeHtml(String(q.answerNote)) + "</span>";
             }
-            if (!ansBody) ansBody = "<span class=\"ref\">（本題未設定參考答案文字）</span>";
 
             var ansHiddenClass = showAns ? "" : " hidden";
 
@@ -493,10 +514,10 @@
               }
               var gcls = !correctLetters.length ? "neutral" : ok ? "ok" : "bad";
               var gtext = !correctLetters.length
-                ? "無法比對：請自行對照參考答案或補齊題庫。"
+                ? "本題尚未設定可比對答案。"
                 : ok
-                  ? "與參考答案一致。"
-                  : "與參考答案不一致；請對照參考選項。";
+                  ? "作答正確。"
+                  : "作答與正確選項不一致。";
               gradeHtml = '<div class="grade ' + gcls + '">' + escapeHtml(gtext) + "</div>";
             }
 
@@ -510,6 +531,9 @@
               "</span>" +
               '<span class="badge">' +
               escapeHtml(typeLabel(q.type)) +
+              "</span>" +
+              '<span class="badge">' +
+              escapeHtml(paperLabel(paperOf(q))) +
               "</span>" +
               (q.score != null ? '<span class="badge">配分 ' + escapeHtml(String(q.score)) + "</span>" : "") +
               '<span class="badge">id: ' +
@@ -530,14 +554,16 @@
               '">重選</button>' +
               "<small>點選項即可作答（複選題可多選）</small>" +
               "</div>" +
-              '<div class="ans' +
-              ansHiddenClass +
-              '" data-ans="' +
-              escapeHtml(q.id) +
-              '">' +
-              ansBody +
-              gradeHtml +
-              "</div>" +
+              (ansBody || gradeHtml
+                ? '<div class="ans' +
+                  ansHiddenClass +
+                  '" data-ans="' +
+                  escapeHtml(q.id) +
+                  '">' +
+                  ansBody +
+                  gradeHtml +
+                  "</div>"
+                : "") +
               (mergedNote ? '<p class="meta" style="margin-top:0.5rem">' + escapeHtml(mergedNote) + "</p>" : "") +
               "</article>"
             );
@@ -636,6 +662,7 @@
       });
 
       searchEl.addEventListener("input", render);
+      paperEl.addEventListener("change", render);
       typeEl.addEventListener("change", render);
       syncHeaderChecks();
       render();
@@ -643,3 +670,4 @@
   </script>
 </body>
 </html>
+
